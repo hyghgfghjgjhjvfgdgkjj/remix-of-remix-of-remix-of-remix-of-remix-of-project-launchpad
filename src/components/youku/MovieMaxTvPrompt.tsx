@@ -19,7 +19,7 @@ export function MovieMaxTvPrompt() {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    if (isNativeApp()) return; // no app pop-up inside the Android app
+    if (isNativeApp() || location.pathname.startsWith("/app") || location.pathname.startsWith("/desktop-account")) return;
     let timer: number | undefined;
     let tourActive = false;
     let shown = false;

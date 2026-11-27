@@ -1,38 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Download, Monitor, Smartphone, Tv, ShieldCheck } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, Download, Monitor, Smartphone, Tv, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { desktopSetup } from "@/components/youku/InstallAppButton";
-import { IPhone, AppHomeScreen, PhoneStep, WindowsStep } from "@/components/app-page/Mockups";
+import movieMaxLogo from "@/assets/moviemax-logo.png";
+import { APP_PREVIEWS, ANDROID_STEPS, WINDOWS_STEPS, PhoneDevice, DesktopDevice } from "@/components/app-page/Mockups";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
       { title: "Download the MOVIE MAX App — Android & Windows" },
-      { name: "description", content: "Download MOVIE MAX for Android and Windows with step-by-step install guides, including how to pass Play Protect." },
+      { name: "description", content: "Preview and download the official MOVIE MAX apps for Android and Windows with real step-by-step installation screenshots." },
       { property: "og:title", content: "Download the MOVIE MAX App" },
-      { property: "og:description", content: "Android and Windows apps with step-by-step install guides." },
+      { property: "og:description", content: "Android and Windows apps with real device previews and step-by-step install screenshots." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AppPage,
 });
-
-const PHONE_STEPS = [
-  "Tap Download app on this page.",
-  "If your browser warns you, tap Download anyway.",
-  "Open MovieMax.apk from your notifications or Downloads.",
-  "Tap Settings and turn on Allow from this source, then go back.",
-  "Play Protect may appear — tap More details.",
-  "Tap Install anyway. The app is safe; it is just not from the Play Store.",
-  "Wait while Movie max installs.",
-  "Tap Open. You're ready to watch!",
-];
-const PC_STEPS = [
-  "Click Download for Windows, then open MovieMax-Setup.exe.",
-  "Choose your language and click OK.",
-  "Click Next on the welcome screen.",
-  "Wait while Movie max installs.",
-  "Keep Create desktop shortcut and Launch ticked, then click Finish.",
-];
 
 function StepNo({ n }: { n: number }) {
   return <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-black text-primary-foreground">{n}</span>;
@@ -40,57 +25,144 @@ function StepNo({ n }: { n: number }) {
 
 function AppPage() {
   return (
-    <main className="min-h-screen bg-background pb-28 text-foreground">
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-10 md:grid-cols-2 md:pt-16">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-primary">MOVIE MAX apps</p>
-          <h1 className="mt-2 text-4xl font-black leading-tight md:text-5xl">Movies, Luganda & series — in your pocket and on your PC.</h1>
-          <p className="mt-4 text-muted-foreground">Faster streaming, background downloads, offline viewing and new-movie alerts.</p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="gap-2 rounded-full"><a href="/downloads/MovieMax.apk" download="MovieMax.apk"><Smartphone className="size-4" />Download for Android</a></Button>
-            <Button asChild size="lg" variant="secondary" className="gap-2 rounded-full"><a href={desktopSetup.url}><Monitor className="size-4" />Download for Windows</a></Button>
-            <Button size="lg" variant="outline" disabled className="gap-2 rounded-full"><Tv className="size-4" />TV · Coming soon</Button>
+    <main className="-mt-7 min-h-screen w-full overflow-x-clip bg-background pb-20 text-foreground lg:mt-0">
+      <header className="sticky top-0 z-30 flex w-full items-center justify-between border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-10">
+        <Link to="/" className="flex items-center gap-2.5 text-sm font-bold text-foreground">
+          <ArrowLeft className="size-4 text-muted-foreground" />
+          <img src={movieMaxLogo} alt="MOVIE MAX" className="h-7 w-auto" draggable={false} />
+          <span className="tracking-wide">MOVIE MAX</span>
+        </Link>
+        <nav className="flex items-center gap-2 text-xs font-semibold sm:gap-4 sm:text-sm">
+          <a href="#mobile" className="text-muted-foreground transition-colors hover:text-foreground">Android</a>
+          <a href="#desktop" className="text-muted-foreground transition-colors hover:text-foreground">Windows</a>
+          <a href="#tv" className="text-muted-foreground transition-colors hover:text-foreground">TV</a>
+        </nav>
+      </header>
+
+      <section className="relative w-full border-b border-border/60 bg-linear-to-b from-primary/10 via-background to-background px-4 py-10 sm:px-6 lg:px-10 lg:py-16">
+        <div className="grid w-full items-center gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-primary sm:text-sm">MOVIE MAX apps</p>
+            <h1 className="mt-2 text-4xl font-black leading-tight tracking-tight sm:text-5xl xl:text-6xl">
+              Watch &amp; download on phone and PC.
+            </h1>
+            <p className="mt-4 max-w-xl text-base text-muted-foreground">
+              Official standalone apps for Android and Windows with faster streaming, offline downloads, Luganda, Luo &amp; Teso rails, and Live TV.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Button asChild size="lg" className="gap-2 rounded-full">
+                <a href="/downloads/MovieMax.apk" download="MovieMax.apk"><Smartphone className="size-4" />Download for Android</a>
+              </Button>
+              <Button asChild size="lg" variant="secondary" className="gap-2 rounded-full">
+                <a href={desktopSetup.url}><Monitor className="size-4" />Download for Windows</a>
+              </Button>
+              <Button size="lg" variant="outline" disabled className="gap-2 rounded-full">
+                <Tv className="size-4" />TV · Coming soon
+              </Button>
+            </div>
+          </div>
+          <div className="relative lg:col-span-7">
+            <div className="pointer-events-none absolute inset-6 -z-0 rounded-full bg-primary/20 blur-3xl" aria-hidden="true" />
+            <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-center sm:gap-0">
+              <DesktopDevice src={APP_PREVIEWS.desktop} alt="Movie max Windows desktop app preview" className="w-full sm:w-[76%] sm:max-w-[680px]" />
+              <PhoneDevice src={APP_PREVIEWS.mobile} alt="Movie max Android mobile app preview" statusBar className="max-w-[235px] shrink-0 sm:-ml-14 sm:w-[29%] sm:max-w-[205px]" />
+            </div>
           </div>
         </div>
-        <div className="relative">
-          <div className="absolute inset-10 -z-0 rounded-full bg-primary/30 blur-3xl" />
-          <IPhone className="relative"><AppHomeScreen /></IPhone>
-        </div>
       </section>
 
-      <section id="mobile" className="mx-auto mt-20 max-w-6xl px-4">
-        <div className="flex items-center gap-2"><Smartphone className="size-6 text-primary" /><h2 className="text-2xl font-black">Install on Android</h2></div>
-        <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground"><ShieldCheck className="size-4 text-primary" />Includes how to pass Google Play Protect.</p>
-        <div className="mt-6 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {PHONE_STEPS.map((text, i) => (
-            <div key={i} className="rounded-3xl border border-border bg-card p-3">
-              <IPhone className="max-w-[170px] border-[6px]"><PhoneStep step={i + 1} /></IPhone>
-              <div className="mt-3 flex gap-2"><StepNo n={i + 1} /><p className="text-sm">{text}</p></div>
+      <section id="mobile" className="w-full border-b border-border/60 px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
+        <div className="grid w-full items-center gap-8 rounded-3xl border border-border/70 bg-card/55 p-6 sm:p-8 lg:grid-cols-12 lg:p-10">
+          <div className="lg:col-span-5">
+            <div className="flex items-center gap-2 text-primary">
+              <Smartphone className="size-6" />
+              <h2 className="text-2xl font-black text-foreground sm:text-3xl">MOVIE MAX for Android</h2>
             </div>
+            <p className="mt-3 text-muted-foreground">
+              Browse Trending, Luganda, Luo, Teso, Music, and Live TV inside the dedicated mobile app — with background downloads and new-movie notifications.
+            </p>
+            <p className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <ShieldCheck className="size-4 shrink-0 text-primary" />Includes every step to pass Google Play Protect safely.
+            </p>
+            <Button asChild size="lg" className="mt-6 gap-2 rounded-full">
+              <a href="/downloads/MovieMax.apk" download="MovieMax.apk"><Download className="size-4" />Download Android app</a>
+            </Button>
+          </div>
+          <div className="flex justify-center lg:col-span-7">
+            <PhoneDevice src={APP_PREVIEWS.mobile} alt="Movie max Android app screen preview" statusBar className="max-w-[260px] sm:max-w-[285px]" />
+          </div>
+        </div>
+
+        <h3 className="mt-12 text-xl font-black sm:text-2xl">Android Installation Procedure</h3>
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {ANDROID_STEPS.map((step, i) => (
+            <article key={step.title} className="flex flex-col rounded-2xl border border-border bg-card p-4">
+              <PhoneDevice src={step.img} alt={`Android install step ${i + 1}: ${step.title}`} compact className="max-w-[220px]" />
+              <div className="mt-4 flex items-start gap-2.5">
+                <StepNo n={i + 1} />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground">{step.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
+                </div>
+              </div>
+            </article>
           ))}
         </div>
-        <Button asChild size="lg" className="mt-6 gap-2 rounded-full"><a href="/downloads/MovieMax.apk" download="MovieMax.apk"><Download className="size-4" />Download Android app</a></Button>
       </section>
 
-      <section id="desktop" className="mx-auto mt-20 max-w-6xl px-4">
-        <div className="flex items-center gap-2"><Monitor className="size-6 text-primary" /><h2 className="text-2xl font-black">Install on Windows</h2></div>
-        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {PC_STEPS.map((text, i) => (
-            <div key={i} className="rounded-3xl border border-border bg-card p-4">
-              <WindowsStep step={i + 1} />
-              <div className="mt-3 flex gap-2"><StepNo n={i + 1} /><p className="text-sm">{text}</p></div>
+      <section id="desktop" className="w-full border-b border-border/60 bg-card/30 px-4 py-14 sm:px-6 lg:px-10 lg:py-20">
+        <div className="grid w-full items-center gap-8 rounded-3xl border border-border/70 bg-card/70 p-6 sm:p-8 lg:grid-cols-12 lg:p-10">
+          <div className="lg:col-span-5">
+            <div className="flex items-center gap-2 text-primary">
+              <Monitor className="size-6" />
+              <h2 className="text-2xl font-black text-foreground sm:text-3xl">MOVIE MAX for Windows</h2>
             </div>
+            <p className="mt-3 text-muted-foreground">
+              Standalone desktop software built for big screens — full sidebar categories, built-in HD player, multiple simultaneous downloads, and desktop shortcut.
+            </p>
+            <Button asChild size="lg" className="mt-6 gap-2 rounded-full">
+              <a href={desktopSetup.url}><Download className="size-4" />Download for Windows</a>
+            </Button>
+          </div>
+          <div className="lg:col-span-7">
+            <DesktopDevice src={APP_PREVIEWS.desktop} alt="Movie max Windows desktop app screen preview" className="max-w-[760px]" />
+          </div>
+        </div>
+
+        <h3 className="mt-12 text-xl font-black sm:text-2xl">Windows Installation Procedure</h3>
+        <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {WINDOWS_STEPS.map((step, i) => (
+            <article key={step.title} className="flex flex-col rounded-2xl border border-border bg-card p-4">
+              <DesktopDevice src={step.img} alt={`Windows install step ${i + 1}: ${step.title}`} compact />
+              <div className="mt-4 flex items-start gap-2.5">
+                <StepNo n={i + 1} />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground">{step.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{step.text}</p>
+                </div>
+              </div>
+            </article>
           ))}
         </div>
-        <Button asChild size="lg" className="mt-6 gap-2 rounded-full"><a href={desktopSetup.url}><Download className="size-4" />Download for Windows</a></Button>
       </section>
 
-      <section id="tv" className="mx-auto mt-20 max-w-6xl px-4">
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-border bg-linear-to-br from-primary/20 to-accent/20 p-10 text-center">
-          <Tv className="size-10 text-primary" />
-          <h2 className="text-2xl font-black">MOVIE MAX for TV</h2>
-          <p className="text-muted-foreground">Coming soon to Android TV and smart TVs.</p>
-          <span className="rounded-full bg-muted px-4 py-1.5 text-sm font-bold">Coming soon</span>
+      <section id="tv" className="w-full px-4 pt-14 sm:px-6 lg:px-10 lg:pt-20">
+        <div className="grid w-full items-center gap-8 rounded-3xl border border-border bg-linear-to-br from-primary/15 via-card to-accent/15 p-6 sm:p-10 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <Tv className="size-9 text-primary" />
+            <h2 className="mt-3 text-2xl font-black sm:text-3xl">MOVIE MAX for TV</h2>
+            <p className="mt-2 text-muted-foreground">Coming soon to Android TV, Google TV, and smart TVs with remote-ready navigation.</p>
+            <span className="mt-5 inline-block rounded-full bg-muted px-4 py-1.5 text-sm font-bold text-foreground">Coming soon</span>
+          </div>
+          <div className="lg:col-span-7">
+            <div className="device-tv-frame mx-auto max-w-[580px]">
+              <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg bg-background/95 p-6 text-center">
+                <img src={movieMaxLogo} alt="MOVIE MAX TV" className="h-12 w-auto" draggable={false} />
+                <p className="text-lg font-black text-foreground">MOVIE MAX TV</p>
+                <p className="text-xs text-muted-foreground">Big-screen TV experience · Coming soon</p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
