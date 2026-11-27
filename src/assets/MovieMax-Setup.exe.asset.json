@@ -1,11 +1,11 @@
 {
-  "version": 1,
   "asset_id": "08f41d69-f1f2-4765-9eef-b4558bd90b84",
-  "project_id": "5cf79427-4f7d-42d2-afdc-5de992a4dddb",
-  "url": "/__l5e/assets-v1/08f41d69-f1f2-4765-9eef-b4558bd90b84/MovieMax-Setup.exe",
-  "r2_key": "a/v1/5cf79427-4f7d-42d2-afdc-5de992a4dddb/08f41d69-f1f2-4765-9eef-b4558bd90b84/MovieMax-Setup.exe",
-  "original_filename": "MovieMax-Setup.exe",
-  "size": 116141152,
   "content_type": "application/octet-stream",
-  "created_at": "2026-11-27T13:18:21Z"
+  "created_at": "2026-11-27T13:18:21Z",
+  "original_filename": "MovieMax-Setup.exe",
+  "project_id": "1a61e01b-cb8c-4864-8395-1e1ed8c65942",
+  "r2_key": "a/v1/1a61e01b-cb8c-4864-8395-1e1ed8c65942/08f41d69-f1f2-4765-9eef-b4558bd90b84/MovieMax-Setup.exe",
+  "size": 116141152,
+  "url": "/__l5e/assets-v1/08f41d69-f1f2-4765-9eef-b4558bd90b84/MovieMax-Setup.exe",
+  "version": 1
 }
