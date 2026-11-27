@@ -118,7 +118,7 @@ function AppPage() {
               <h2 className="text-2xl font-black text-foreground sm:text-3xl">MOVIE MAX for Windows</h2>
             </div>
             <p className="mt-3 text-muted-foreground">
-              Standalone desktop software built for big screens — full sidebar categories, built-in HD player, multiple simultaneous downloads, and desktop shortcut.
+              Standalone desktop software built for big screens — up to 4K HD quality playback, full sidebar categories, multiple simultaneous downloads, and desktop shortcut.
             </p>
             <Button asChild size="lg" className="mt-6 gap-2 rounded-full">
               <a href={desktopSetup.url}><Download className="size-4" />Download for Windows</a>

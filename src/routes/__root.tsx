@@ -17,7 +17,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { SubscriptionProvider } from "@/hooks/useSubscription";
 import { AuthProvider } from "@/hooks/useAuth";
 import { DevToolsGuard } from "@/components/security/DevToolsGuard";
-import { AppDownloadBanner } from "@/components/youku/AppDownloadBanner";
 import { MovieMaxTvPrompt } from "@/components/youku/MovieMaxTvPrompt";
 import { ReferralTracker } from "@/components/youku/ReferralTracker";
 import { DownloadTour } from "@/components/luo/DownloadTour";
@@ -188,7 +187,6 @@ function RootComponent() {
         </SubscriptionProvider>
       </AuthProvider>
       <DevToolsGuard />
-      <AppDownloadBanner />
       <MovieMaxTvPrompt />
       <DownloadTour />
       <Toaster position="top-center" richColors />

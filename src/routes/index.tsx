@@ -5,6 +5,7 @@ import { Play } from "lucide-react";
 import { Sidebar } from "@/components/youku/Sidebar";
 import { TopBar } from "@/components/youku/TopBar";
 import { MobileNav } from "@/components/youku/MobileNav";
+import { AppDownloadBanner } from "@/components/youku/AppDownloadBanner";
 import { Rail } from "@/components/youku/Rail";
 import { RowSkeleton } from "@/components/youku/Skeletons";
 import { VjRail } from "@/components/youku/VjRail";
@@ -308,6 +309,7 @@ function HomePage() {
 
       </div>
       <MobileNav />
+      <AppDownloadBanner />
     </div>
   );
 }

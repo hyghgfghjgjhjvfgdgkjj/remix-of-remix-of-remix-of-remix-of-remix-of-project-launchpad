@@ -84,6 +84,11 @@
   --color-channel-foreground: var(--channel-foreground);
   --color-app-install: var(--app-install);
   --color-app-install-foreground: var(--app-install-foreground);
+  --color-app-banner: var(--app-banner);
+  --color-app-banner-bar: var(--app-banner-bar);
+  --color-app-banner-foreground: var(--app-banner-foreground);
+  --color-app-banner-muted: var(--app-banner-muted);
+  --color-app-banner-cyan: var(--app-banner-cyan);
   --color-paypal-gold: var(--paypal-gold);
   --color-paypal-gold-hover: var(--paypal-gold-hover);
   --color-paypal-navy: var(--paypal-navy);
@@ -96,6 +101,14 @@
 :root {
   --app-install: oklch(0.56 0.21 253);
   --app-install-foreground: oklch(0.99 0 0);
+  /* Home page floating App Download billboard: deep sharp obsidian dark, zero blur. */
+  --app-banner: oklch(0.13 0.012 264);
+  --app-banner-bar: oklch(0.095 0.01 264);
+  --app-banner-foreground: oklch(0.98 0 0);
+  --app-banner-muted: oklch(0.75 0.015 260);
+  --app-banner-cyan: oklch(0.76 0.16 232);
+  --app-banner-circle: linear-gradient(140deg, oklch(0.66 0.21 245) 0%, oklch(0.54 0.26 278) 58%, oklch(0.62 0.27 315) 100%);
+  --app-banner-cta: linear-gradient(100deg, oklch(0.65 0.22 246) 0%, oklch(0.56 0.27 282) 55%, oklch(0.62 0.28 320) 100%);
   /* PayPal palette: gold button, navy/blue brand, used for money surfaces. */
   --paypal-gold: oklch(0.85 0.165 83);
   --paypal-gold-hover: oklch(0.8 0.165 80);
@@ -761,6 +774,26 @@
 
 .tv-promo-timer { animation: wa-exit-bar 9000ms linear forwards; }
 @media (prefers-reduced-motion: reduce) { .tv-promo-timer { animation: none; } }
+
+/* Home page App Download floating billboard (5s auto-timeout, crisp dark, zero blur). */
+.app-banner-surface {
+  background-color: var(--app-banner);
+  background-image:
+    linear-gradient(125deg, color-mix(in oklab, var(--app-banner-cyan) 7%, transparent) 0%, transparent 42%),
+    linear-gradient(to right, color-mix(in oklab, var(--app-banner-foreground) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--app-banner-foreground) 4%, transparent) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
+}
+.app-banner-circle { background-image: var(--app-banner-circle); }
+.app-banner-cta { background-image: var(--app-banner-cta); }
+.app-banner-headline-accent {
+  background-image: var(--brand-logo-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.app-banner-timer { animation: wa-exit-bar 5000ms linear forwards; }
+@media (prefers-reduced-motion: reduce) { .app-banner-timer { animation: none; } }
 
 /* Movie max Android app shell: two-row header (brand + search, category tabs). */
 .app-gradient { background-image: var(--gradient-app); }

@@ -19,7 +19,7 @@ export function MovieMaxTvPrompt() {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    if (isNativeApp() || location.pathname.startsWith("/app") || location.pathname.startsWith("/desktop-account")) return;
+    if (isNativeApp() || location.pathname === "/" || location.pathname.startsWith("/app") || location.pathname.startsWith("/desktop-account")) return;
     let timer: number | undefined;
     let tourActive = false;
     let shown = false;
