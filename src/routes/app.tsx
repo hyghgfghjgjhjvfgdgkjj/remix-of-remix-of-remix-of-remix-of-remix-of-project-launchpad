@@ -3,7 +3,7 @@ import { ArrowLeft, Download, Monitor, Smartphone, Tv, ShieldCheck } from "lucid
 import { Button } from "@/components/ui/button";
 import { desktopSetup } from "@/components/youku/InstallAppButton";
 import movieMaxLogo from "@/assets/moviemax-logo.png";
-import { APP_PREVIEWS, ANDROID_STEPS, WINDOWS_STEPS, PhoneDevice, DesktopDevice } from "@/components/app-page/Mockups";
+import { APP_PREVIEWS, ANDROID_STEPS, WINDOWS_STEPS, PhoneDevice, DesktopDevice, TvDevice } from "@/components/app-page/Mockups";
 
 export const Route = createFileRoute("/app")({
   head: () => ({
@@ -64,8 +64,8 @@ function AppPage() {
           <div className="relative lg:col-span-7">
             <div className="pointer-events-none absolute inset-6 -z-0 rounded-full bg-primary/20 blur-3xl" aria-hidden="true" />
             <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-center sm:gap-0">
-              <DesktopDevice src={APP_PREVIEWS.desktop} alt="Movie max Windows desktop app preview" className="w-full sm:w-[76%] sm:max-w-[680px]" />
-              <PhoneDevice src={APP_PREVIEWS.mobile} alt="Movie max Android mobile app preview" statusBar className="max-w-[235px] shrink-0 sm:-ml-14 sm:w-[29%] sm:max-w-[205px]" />
+              <DesktopDevice src={APP_PREVIEWS.desktop} alt="Movie max Windows desktop app preview" className="w-full sm:w-[79%] sm:max-w-[700px]" />
+              <PhoneDevice src={APP_PREVIEWS.mobile} alt="Movie max Android mobile app preview" statusBar className="z-20 max-w-[235px] shrink-0 sm:-ml-14 sm:w-[27%] sm:max-w-[205px]" />
             </div>
           </div>
         </div>
@@ -155,13 +155,13 @@ function AppPage() {
             <span className="mt-5 inline-block rounded-full bg-muted px-4 py-1.5 text-sm font-bold text-foreground">Coming soon</span>
           </div>
           <div className="lg:col-span-7">
-            <div className="device-tv-frame mx-auto max-w-[580px]">
-              <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg bg-background/95 p-6 text-center">
+            <TvDevice className="max-w-[600px]">
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-background p-6 text-center">
                 <img src={movieMaxLogo} alt="MOVIE MAX TV" className="h-12 w-auto" draggable={false} />
                 <p className="text-lg font-black text-foreground">MOVIE MAX TV</p>
                 <p className="text-xs text-muted-foreground">Big-screen TV experience · Coming soon</p>
               </div>
-            </div>
+            </TvDevice>
           </div>
         </div>
       </section>

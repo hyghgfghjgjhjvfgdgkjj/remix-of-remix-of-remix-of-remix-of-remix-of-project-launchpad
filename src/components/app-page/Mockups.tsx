@@ -1,5 +1,9 @@
+import type { ReactNode } from "react";
 import previewMobile from "@/assets/app-guide/preview-mobile.jpg";
 import previewDesktop from "@/assets/app-guide/preview-desktop.jpg";
+import phoneFrame from "@/assets/app-guide/device-phone-frame.webp";
+import desktopFrame from "@/assets/app-guide/device-desktop-frame.webp";
+import tvFrame from "@/assets/app-guide/device-tv-frame.webp";
 import android1 from "@/assets/app-guide/android-1-download.jpg";
 import android2 from "@/assets/app-guide/android-2-harmful.jpg";
 import android3 from "@/assets/app-guide/android-3-open-apk.jpg";
@@ -40,7 +44,7 @@ export const WINDOWS_STEPS = [
   { img: win6, title: "Finish & launch", text: "Keep Launch Movie max and Create a desktop shortcut ticked, then click Finish." },
 ] as const;
 
-/** Realistic titanium smartphone hardware frame holding a real screenshot image. */
+/** Photorealistic smartphone hardware frame holding a real screenshot image. */
 export function PhoneDevice({
   src,
   alt,
@@ -55,11 +59,10 @@ export function PhoneDevice({
   className?: string;
 }) {
   return (
-    <div className={`device-phone ${compact ? "device-phone-compact" : ""} mx-auto w-full select-none ${className}`}>
-      <div className={`device-phone-inner flex flex-col ${statusBar ? "aspect-[9/20.4]" : "aspect-[9/19.5]"}`}>
-        <div className="device-phone-island" aria-hidden="true" />
+    <div className={`device-hardware-shadow relative mx-auto w-full select-none ${className}`}>
+      <div className="device-phone-slot absolute flex flex-col overflow-hidden bg-background">
         {statusBar && (
-          <div className="flex h-7 shrink-0 items-center justify-between bg-background px-4 text-[10px] font-semibold text-foreground/85" aria-hidden="true">
+          <div className="flex h-[5.6%] shrink-0 items-center justify-between bg-background px-[9%] pt-[2%] text-[9px] font-semibold text-foreground/90 sm:text-[10px]" aria-hidden="true">
             <span>9:41</span>
             <span>5G</span>
           </div>
@@ -69,14 +72,15 @@ export function PhoneDevice({
           alt={alt}
           draggable={false}
           loading={compact ? "lazy" : "eager"}
-          className="min-h-0 w-full flex-1 object-cover object-top"
+          className={statusBar ? "min-h-0 w-full flex-1 object-fill" : "h-full w-full object-fill"}
         />
       </div>
+      <img src={phoneFrame} alt="" aria-hidden="true" draggable={false} className="pointer-events-none relative z-10 block h-auto w-full" />
     </div>
   );
 }
 
-/** Realistic desktop monitor hardware frame holding a real desktop screenshot image. */
+/** Photorealistic all-in-one desktop computer hardware frame holding a real screenshot image. */
 export function DesktopDevice({
   src,
   alt,
@@ -89,21 +93,27 @@ export function DesktopDevice({
   className?: string;
 }) {
   return (
-    <div className={`mx-auto w-full select-none ${className}`}>
-      <div className={`device-desktop-bezel ${compact ? "device-desktop-compact" : ""}`}>
-        <div className="mx-auto mb-1.5 size-1.5 rounded-full bg-muted-foreground/40" aria-hidden="true" />
-        <div className="device-desktop-screen aspect-[16/10]">
-          <img
-            src={src}
-            alt={alt}
-            draggable={false}
-            loading={compact ? "lazy" : "eager"}
-            className="h-full w-full object-cover object-top"
-          />
-        </div>
+    <div className={`device-hardware-shadow relative mx-auto w-full select-none ${className}`}>
+      <div className="device-desktop-slot absolute overflow-hidden bg-background">
+        <img
+          src={src}
+          alt={alt}
+          draggable={false}
+          loading={compact ? "lazy" : "eager"}
+          className="h-full w-full object-fill"
+        />
       </div>
-      <div className={`device-desktop-neck ${compact ? "device-desktop-compact-neck" : ""}`} aria-hidden="true" />
-      <div className={`device-desktop-base ${compact ? "device-desktop-compact-base" : ""}`} aria-hidden="true" />
+      <img src={desktopFrame} alt="" aria-hidden="true" draggable={false} className="pointer-events-none relative z-10 block h-auto w-full" />
+    </div>
+  );
+}
+
+/** Photorealistic OLED Smart TV hardware frame. */
+export function TvDevice({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`device-hardware-shadow relative mx-auto w-full select-none ${className}`}>
+      <div className="device-tv-slot absolute overflow-hidden bg-background">{children}</div>
+      <img src={tvFrame} alt="" aria-hidden="true" draggable={false} className="pointer-events-none relative z-10 block h-auto w-full" />
     </div>
   );
 }
