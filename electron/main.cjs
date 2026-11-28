@@ -4,6 +4,15 @@ const { app, BrowserWindow, ipcMain, net, shell } = require("electron");
 const fs = require("node:fs");
 const path = require("node:path");
 const { matchDownload, downloadFilename } = require("./download-rules.cjs");
+const {
+  fsVal,
+  parseQueryResult,
+  isVerifiedOwnerAdmin,
+  isRevokedTokenError,
+  serverNowMs,
+  mergeAccountState,
+  mapUploadDocs,
+} = require("./account-rules.cjs");
 
 const DEFAULT_SITE = "https://luofilm.site";
 const ACTIVE_SITE_DOC = "https://firestore.googleapis.com/v1/projects/luo-film-2026/databases/(default)/documents/app_settings/active_site?key=AIzaSyBTSFk7GSITIHQ9WxSdi1BoVvcr4FXuZe0";
@@ -38,6 +47,43 @@ ipcMain.handle("feed", async () => {
   return cached ? { ...cached, offline: true } : { items: [], site: s, offline: true };
 });
 
+async function directUploads(lang) {
+  const docs = [];
+  let pageToken = "";
+  const headers = idToken?.token ? { authorization: `Bearer ${idToken.token}` } : {};
+  try {
+    for (let i = 0; i < 10; i++) {
+      const u = `${FS}/media?key=${FB_KEY}&pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ""}`;
+      const res = await net.fetch(u, { headers, signal: timeout(12000) });
+      if (!res.ok) break;
+      const body = await res.json();
+      if (Array.isArray(body.documents)) docs.push(...body.documents);
+      if (!body.nextPageToken) break;
+      pageToken = body.nextPageToken;
+    }
+  } catch {}
+  return mapUploadDocs(docs, lang);
+}
+
+async function directUploadTitle(rawId) {
+  const headers = idToken?.token ? { authorization: `Bearer ${idToken.token}` } : {};
+  try {
+    const res = await net.fetch(`${FS}/media/${encodeURIComponent(rawId)}?key=${FB_KEY}`, { headers, signal: timeout(10000) });
+    if (!res.ok) return null;
+    const doc = await res.json();
+    const [item] = mapUploadDocs([doc], (fsVal(doc.fields?.language) || "luo").toLowerCase());
+    if (!item) return null;
+    const q = async (fieldPath) => {
+      const r = await net.fetch(`${FS}:runQuery?key=${FB_KEY}`, { method: "POST", headers: { ...headers, "content-type": "application/json" }, signal: timeout(10000),
+        body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "episodes" }], where: { fieldFilter: { field: { fieldPath }, op: "EQUAL", value: { stringValue: rawId } } } } }) });
+      return parseQueryResult(r.ok, await r.json().catch(() => null)).docs;
+    };
+    let epDocs = await q("title_id"); if (!epDocs.length) epDocs = await q("media_id");
+    const episodes = epDocs.map((d) => ({ season: Number(fsVal(d.fields?.season)) || 1, episode: Number(fsVal(d.fields?.episode) ?? fsVal(d.fields?.episode_number)) || 1, title: fsVal(d.fields?.name) || fsVal(d.fields?.title) || null, url: fsVal(d.fields?.video_url) || fsVal(d.fields?.url) || null })).filter((e) => e.url).sort((a, b) => a.season - b.season || a.episode - b.episode);
+    return { id: item.id, title: item.title, description: item.description, poster: item.poster, backdrop: item.poster, year: item.year, genre: item.genre, vj: item.vj, seasons: [], luganda: { url: item.direct, episodes } };
+  } catch { return null; }
+}
+
 ipcMain.handle("api", async (_e, p) => {
   if (typeof p !== "string" || !/^[\w\-/?=&%.]+$/.test(p)) return { error: "bad" };
   const s = await activeSite();
@@ -49,10 +95,26 @@ ipcMain.handle("api", async (_e, p) => {
       if (!res.ok || !(res.headers.get("content-type") || "").includes("json")) continue;
       const body = await res.json();
       if (base !== s) { site = base; fs.writeFileSync(file("site.json"), JSON.stringify({ site })); }
-      // Luo/Teso rows: never replace a saved list with an empty one (Firestore quota days).
-      if (p.startsWith("uploads/") && !body.items?.length) { const c = readJson(key, null); if (c?.items?.length) return c; }
+      if (p.startsWith("uploads/") && !body.items?.length) {
+        const direct = await directUploads(p.slice(8).split("?")[0]);
+        if (direct.length) { const out = { items: direct }; fs.writeFileSync(file(key), JSON.stringify(out)); return out; }
+        const c = readJson(key, null);
+        return c?.items?.length ? { ...c, offline: true } : { items: [], quota: true };
+      }
+      if (p.startsWith("title/up-") && body.error) {
+        const direct = await directUploadTitle(p.slice(9).split("?")[0]);
+        if (direct) { fs.writeFileSync(file(key), JSON.stringify(direct)); return direct; }
+      }
       fs.writeFileSync(file(key), JSON.stringify(body)); return body;
     } catch {}
+  }
+  if (p.startsWith("uploads/")) {
+    const direct = await directUploads(p.slice(8).split("?")[0]);
+    if (direct.length) { const out = { items: direct }; fs.writeFileSync(file(key), JSON.stringify(out)); return out; }
+  }
+  if (p.startsWith("title/up-")) {
+    const direct = await directUploadTitle(p.slice(9).split("?")[0]);
+    if (direct) { fs.writeFileSync(file(key), JSON.stringify(direct)); return direct; }
   }
   const c = readJson(key, null);
   return c ? { ...c, offline: true } : { offline: true };
@@ -61,34 +123,63 @@ ipcMain.handle("api", async (_e, p) => {
 const FS = "https://firestore.googleapis.com/v1/projects/luo-film-2026/databases/(default)/documents";
 // Provider checkout and activation use the same authenticated flow as the website.
 let idToken = null;
+let clockOffset = 0;
 const FB_KEY = "AIzaSyBTSFk7GSITIHQ9WxSdi1BoVvcr4FXuZe0";
 const READ_USER = `new Promise((ok) => { const r = indexedDB.open("firebaseLocalStorageDb"); r.onerror = () => ok(null);
   r.onsuccess = () => { try { const q = r.result.transaction("firebaseLocalStorage").objectStore("firebaseLocalStorage").getAll();
   q.onsuccess = () => { const u = (q.result || []).map((x) => x.value).find((v) => v && v.uid && v.stsTokenManager); ok(u ? { uid: u.uid, email: u.email, name: u.displayName, photo: u.photoURL, refreshToken: u.stsTokenManager.refreshToken, firebaseUser: u } : null); };
   q.onerror = () => ok(null); } catch { ok(null); } }; })`;
 const notifyAccount = () => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send("account-changed"));
+async function fsQuery(token, collectionId, fieldPath, value) {
+  try {
+    const res = await net.fetch(`${FS}:runQuery?key=${FB_KEY}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      signal: timeout(10000),
+      body: JSON.stringify({ structuredQuery: { from: [{ collectionId }], where: { fieldFilter: { field: { fieldPath }, op: "EQUAL", value: { stringValue: value } } } } }),
+    });
+    return { ...parseQueryResult(res.ok, await res.json().catch(() => null)), nowMs: serverNowMs(res.headers, 0) };
+  } catch {
+    return { ok: false, docs: [], nowMs: 0 };
+  }
+}
 async function account() {
   const acc = readJson("account.json", null); if (!acc?.refreshToken) return { user: null };
   const user = { uid: acc.uid, email: acc.email, name: acc.name, photo: acc.photo };
+  const cached = readJson("sub.json", null);
   try {
-    const t = await (await net.fetch(`https://securetoken.googleapis.com/v1/token?key=${FB_KEY}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(acc.refreshToken)}`, signal: timeout(10000) })).json();
-    if (!t.id_token) { if (t.error) { fs.rmSync(file("account.json"), { force: true }); return { user: null }; } throw 0; }
-    if (t.refresh_token && t.refresh_token !== acc.refreshToken) fs.writeFileSync(file("account.json"), JSON.stringify({ ...acc, refreshToken: t.refresh_token }));
-    const rows = await (await net.fetch("https://firestore.googleapis.com/v1/projects/luo-film-2026/databases/(default)/documents:runQuery", { method: "POST", headers: { authorization: `Bearer ${t.id_token}`, "content-type": "application/json" }, signal: timeout(10000),
-      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "luo_subscriptions" }], where: { fieldFilter: { field: { fieldPath: "user_id" }, op: "EQUAL", value: { stringValue: acc.uid } } } } }) })).json();
-    idToken = { uid: acc.uid, token: t.id_token, at: Date.now() };
-    const val = (f) => f && (f.stringValue ?? f.timestampValue ?? f.integerValue ?? f.doubleValue);
-    let admin = false;
-    if (!admin) { try { const rr = await (await net.fetch(FS + ":runQuery", { method: "POST", headers: { authorization: `Bearer ${t.id_token}`, "content-type": "application/json" }, signal: timeout(8000),
-      body: JSON.stringify({ structuredQuery: { from: [{ collectionId: "user_roles" }], where: { fieldFilter: { field: { fieldPath: "user_id" }, op: "EQUAL", value: { stringValue: acc.uid } } } } }) })).json();
-      admin = (Array.isArray(rr) ? rr : []).some((r) => ["admin", "staff"].includes(r.document?.fields?.role?.stringValue)); } catch {} }
-    const live = (Array.isArray(rows) ? rows : []).map((r) => r.document?.fields).filter(Boolean)
-      .map((f) => ({ status: String(val(f.status) || "").toLowerCase(), expires: val(f.expires_at), plan: val(f.plan_name) }))
-      .filter((x) => x.status === "active" && (!x.expires || Date.parse(x.expires) > Date.now()))
-      .sort((a, b) => Date.parse(b.expires || 0) - Date.parse(a.expires || 0))[0];
-    const out = { user, admin, subscribed: !!live || admin, plan: live?.plan || null, expires: live?.expires || null };
-    fs.writeFileSync(file("sub.json"), JSON.stringify(out)); return out;
-  } catch { const c = readJson("sub.json", null); return c && c.user?.uid === acc.uid ? { ...c, admin: false, subscribed: !!c.expires && Date.parse(c.expires) > Date.now(), offline: true } : { user, subscribed: false }; }
+    const tokenRes = await net.fetch(`https://securetoken.googleapis.com/v1/token?key=${FB_KEY}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(acc.refreshToken)}`, signal: timeout(10000) });
+    const t = await tokenRes.json().catch(() => ({}));
+    const nowMs = serverNowMs(tokenRes.headers, Date.now() + clockOffset);
+    if (tokenRes.headers.get("date")) clockOffset = nowMs - Date.now();
+    if (!t.id_token) {
+      if (t.error && isRevokedTokenError(t.error)) { fs.rmSync(file("account.json"), { force: true }); fs.rmSync(file("sub.json"), { force: true }); return { user: null }; }
+      throw new Error("token unavailable");
+    }
+    const uid = t.user_id || acc.uid;
+    user.uid = uid;
+    if (t.refresh_token && t.refresh_token !== acc.refreshToken) fs.writeFileSync(file("account.json"), JSON.stringify({ ...acc, uid, refreshToken: t.refresh_token }));
+    idToken = { uid, token: t.id_token, at: Date.now() };
+    const verifiedOwnerAdmin = isVerifiedOwnerAdmin(t.id_token);
+    const [subsResult, rolesResult] = await Promise.all([
+      fsQuery(t.id_token, "luo_subscriptions", "user_id", uid),
+      verifiedOwnerAdmin ? Promise.resolve({ ok: true, docs: [], nowMs: 0 }) : fsQuery(t.id_token, "user_roles", "user_id", uid),
+    ]);
+    // Also support user_roles docs keyed directly by uid when the query returned no rows.
+    if (!verifiedOwnerAdmin && rolesResult.ok && !rolesResult.docs.length) {
+      try {
+        const direct = await net.fetch(`${FS}/user_roles/${encodeURIComponent(uid)}?key=${FB_KEY}`, { headers: { authorization: `Bearer ${t.id_token}` }, signal: timeout(6000) });
+        if (direct.ok) { const doc = await direct.json(); if (doc?.fields) rolesResult.docs.push(doc); }
+      } catch {}
+    }
+    const checkNow = subsResult.nowMs || rolesResult.nowMs || nowMs;
+    const { out, shouldPersist } = mergeAccountState({ user, subsResult, rolesResult, verifiedOwnerAdmin, cached, nowMs: checkNow });
+    if (shouldPersist) fs.writeFileSync(file("sub.json"), JSON.stringify(out));
+    return out;
+  } catch {
+    const { out } = mergeAccountState({ user, subsResult: { ok: false, docs: [] }, rolesResult: { ok: false, docs: [] }, verifiedOwnerAdmin: false, cached, nowMs: Date.now() + clockOffset });
+    return out;
+  }
 }
 ipcMain.handle("account", () => account());
 ipcMain.handle("logout", async () => {
@@ -113,9 +204,10 @@ ipcMain.handle("email-auth", async (_e, o) => {
 });
 
 let login = null;
+const normHost = (h) => String(h || "").toLowerCase().replace(/^www\./, "");
 function trustedAccountSender(e) {
   if (!login || login.isDestroyed() || e.sender !== login.webContents) return false;
-  try { const u = new URL(e.sender.getURL()); return u.origin === site && u.pathname === "/desktop-account"; } catch { return false; }
+  try { const u = new URL(e.sender.getURL()); const s = new URL(site || DEFAULT_SITE); return u.protocol === "https:" && normHost(u.hostname) === normHost(s.hostname) && u.pathname === "/desktop-account"; } catch { return false; }
 }
 ipcMain.handle("desktop-session", (e) => trustedAccountSender(e) ? readJson("account.json", null)?.firebaseUser || null : null);
 ipcMain.handle("desktop-ready", async (e) => {
@@ -132,6 +224,7 @@ ipcMain.handle("login", async (e, p) => {
   if (!login || login.isDestroyed()) {
     login = new BrowserWindow({ parent, modal: true, width: p === "/plans" ? 850 : 480, height: 760, resizable: true, backgroundColor: "#101217", title: "Movie max", autoHideMenuBar: true, icon: path.join(__dirname, "icon.ico"),
       webPreferences: { preload: path.join(__dirname, "account-preload.cjs"), contextIsolation: true, nodeIntegration: false } });
+    login.on("closed", () => { account().then(notifyAccount).catch(() => {}); });
     login.webContents.setWindowOpenHandler(({ url }) => {
       try { const u = new URL(url); if (u.protocol === "https:" && /(^|\.)(accounts.google.com|whop.com|paypal.com)$/.test(u.hostname)) return { action: "allow" }; } catch {}
       return { action: "deny" };

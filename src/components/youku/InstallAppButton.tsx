@@ -59,7 +59,7 @@ type InstallPrompt = Event & {
 };
 
 // Public R2 file: Lovable asset URLs do not exist on independent deployments.
-export const desktopSetup = { url: "https://pub-12f7d967af73467f908bdcc926df41e7.r2.dev/media/admin/63715bc7-8f35-4406-9d46-2dd97b47e9e6-MovieMax-Setup.exe" };
+export const desktopSetup = { url: "https://pub-12f7d967af73467f908bdcc926df41e7.r2.dev/media/admin/4fd8e34b-67e1-48ae-9ae7-5f4c56c7a526-MovieMax-Setup.exe" };
 
 /** Device type comes from the browser itself, never the window width, so a resized desktop browser still gets the desktop setup. */
 export function desktopMode(): "windows" | "electron" | null {

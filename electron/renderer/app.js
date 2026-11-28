@@ -49,8 +49,9 @@ async function render() {
   const url = (p) => r.v === "search" ? `search?q=${encodeURIComponent(r.q)}` : r.v === "luganda" ? `luganda/movies?page=${p}` : r.v === "up" ? `uploads/${r.lang}` : `category/${r.slug}?page=${p}`;
   const d = await api.api(url(1)); if (route !== r) return; status(d);
   const items = d.items || [];
-  v.innerHTML = `<h3>${label}</h3>${items.length ? `<div class="grid" id="g">${items.map(card).join("")}</div>${r.v !== "search" && r.v !== "up" ? `<button class="more" id="more">Load more</button>` : ""}` : `<div class="empty">Nothing here yet.</div>`}`;
+  v.innerHTML = `<h3>${label}</h3>${items.length ? `<div class="grid" id="g">${items.map(card).join("")}</div>${r.v !== "search" && r.v !== "up" ? `<button class="more" id="more">Load more</button>` : ""}` : `<div class="empty">${r.v === "up" ? "Couldn't load titles right now." : "Nothing here yet."}${r.v === "up" ? ` <button class="more" id="retry" style="margin:12px auto 0">Retry</button>` : ""}</div>`}`;
   const more = $("#more"); if (more) more.onclick = async () => { more.textContent = "Loading…"; const n = await api.api(url(++page)); $("#g").insertAdjacentHTML("beforeend", (n.items || []).map(card).join("")); more.textContent = (n.items || []).length ? "Load more" : "That's all"; };
+  const retry = $("#retry"); if (retry) retry.onclick = () => render();
 }
 
 let homeData = null;
@@ -90,11 +91,11 @@ async function title(v, id) {
     : (d.seasons || []).map((s) => Array.from({ length: s.episodes }, (_, e) => `<button data-se="${s.season}" data-ep="${e + 1}">S${s.season} E${e + 1}</button>`).join("")).join("");
   v.innerHTML = `<div class="detail">${d.backdrop ? `<img class="bd" src="${esc(d.backdrop)}">` : ""}${d.poster ? `<img class="po" src="${esc(d.poster)}">` : ""}<div>
   <h2>${esc(d.title)}</h2><span class="chips">${esc([d.year, d.genre, d.duration, d.country, d.vj && "VJ " + d.vj].filter(Boolean).join(" · "))}</span><p>${esc(d.description || "")}</p>
-  <div class="btns">${lg ? (lg.url || lg.episodes.length ? `<button class="pri" data-play="${lg.url ? -1 : 0}">▶ Play</button>` : "") : `<button class="pri" data-se="${d.seasons?.[0]?.season || 0}" data-ep="${d.seasons?.length ? 1 : 0}">▶ Play</button>`}<button class="sec" data-acc="plans">♛ Subscribe</button></div>
+  <div class="btns">${lg ? (lg.url || lg.episodes.length ? `<button class="pri" data-play="${lg.url ? -1 : 0}">▶ Play</button>` : "") : `<button class="pri" data-se="${d.seasons?.[0]?.season || 0}" data-ep="${d.seasons?.length ? 1 : 0}">▶ Play</button>`}${acc.admin ? "" : `<button class="sec" data-acc="plans">♛ Subscribe</button>`}</div>
   ${eps ? `<div class="eps">${eps}</div>` : ""}</div></div>`;
   v.onclick2 = (t) => {
-    if (t.dataset.play !== undefined) { const e = lg.episodes[+t.dataset.play]; if (!gate()) return true; go({ v: "play", id, title: d.title, meta: [d.rating && "★ " + d.rating, d.year, d.country, d.genre].filter(Boolean).join(" / "), poster: d.poster, direct: e ? e.url : lg.url, label: e ? `S${e.season} E${e.episode}` : "", eps: lg.episodes, at: +t.dataset.play }); return true; }
-    if (t.dataset.se !== undefined) { const all = (d.seasons || []).flatMap((s) => Array.from({ length: s.episodes }, (_, e) => ({ season: s.season, episode: e + 1 }))); if (!gate()) return true; go({ v: "play", id, title: d.title, meta: [d.rating && "★ " + d.rating, d.year, d.country, d.genre].filter(Boolean).join(" / "), poster: d.poster, se: +t.dataset.se, ep: +t.dataset.ep, label: +t.dataset.se ? `S${t.dataset.se} E${t.dataset.ep}` : "", eps: all, at: all.findIndex((x) => x.season === +t.dataset.se && x.episode === +t.dataset.ep) }); return true; }
+    if (t.dataset.play !== undefined) { const e = lg.episodes[+t.dataset.play]; void ensureAccess().then((ok) => ok && go({ v: "play", id, title: d.title, meta: [d.rating && "★ " + d.rating, d.year, d.country, d.genre].filter(Boolean).join(" / "), poster: d.poster, direct: e ? e.url : lg.url, label: e ? `S${e.season} E${e.episode}` : "", eps: lg.episodes, at: +t.dataset.play })); return true; }
+    if (t.dataset.se !== undefined) { const all = (d.seasons || []).flatMap((s) => Array.from({ length: s.episodes }, (_, e) => ({ season: s.season, episode: e + 1 }))); void ensureAccess().then((ok) => ok && go({ v: "play", id, title: d.title, meta: [d.rating && "★ " + d.rating, d.year, d.country, d.genre].filter(Boolean).join(" / "), poster: d.poster, se: +t.dataset.se, ep: +t.dataset.ep, label: +t.dataset.se ? `S${t.dataset.se} E${t.dataset.ep}` : "", eps: all, at: all.findIndex((x) => x.season === +t.dataset.se && x.episode === +t.dataset.ep) })); return true; }
   };
 }
 
@@ -116,7 +117,7 @@ async function play(v, r) {
       <div class="menu"><button id="qb" title="Quality & speed">${SVG.gear}<sup id="qtag"></sup></button><div class="pop" id="qm"></div></div>
       <button id="fs" title="Full screen">${SVG.full}</button></div></div>
   </div>
-  <div class="pbar"><div><h2>${esc(r.title)}</h2><small>${esc(r.label || "")}</small></div><button class="sec" id="dlb">${SVG.dl} Download</button><button class="sec" data-acc="plans">♛ Subscribe</button></div>
+  <div class="pbar"><div><h2>${esc(r.title)}</h2><small>${esc(r.label || "")}</small></div><button class="sec" id="dlb">${SVG.dl} Download</button>${acc.admin ? "" : `<button class="sec" data-acc="plans">♛ Subscribe</button>`}</div>
   </div>${series ? (() => { const cur = r.eps[r.at] || r.eps[0], seasons = [...new Set(r.eps.map((e) => e.season))], list = r.eps.map((e, n) => ({ ...e, n })).filter((e) => e.season === cur.season);
     return `<aside class="eplist"><h5>Details</h5><b class="et">${esc(r.title)}</b><small class="em">${esc(r.meta || "")}</small><hr>
     <h4>Episode <small>Total ${list.length} EP</small></h4>${seasons.length > 1 ? `<div class="stabs">${seasons.map((x) => `<button data-sea="${x}" class="${x === cur.season ? "on" : ""}">S${x}</button>`).join("")}</div>` : ""}
@@ -151,7 +152,7 @@ async function play(v, r) {
   $("#qm").onclick = (e) => { const q = e.target.closest("[data-q]"), p = e.target.closest("[data-sp]"); if (q) load(+q.dataset.q); if (p) vid.playbackRate = +p.dataset.sp; menus(); };
   $("#ccm").onclick = (e) => { const c = e.target.closest("[data-cc]"); if (!c) return; [...vid.textTracks].forEach((t, n) => t.mode = n === +c.dataset.cc ? "showing" : "hidden"); $("#ccm").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === c)); };
   const load = (n) => { cur = n; const t = vid.currentTime, playing = !vid.paused || !t; vid.innerHTML = srcs[n].subtitles.map((c) => `<track kind="subtitles" label="${esc(c.label)}" src="${esc(c.url)}">`).join(""); vid.src = srcs[n].url; if (t) vid.addEventListener("loadedmetadata", () => vid.currentTime = t, { once: true }); if (playing) vid.play().catch(ui); menus(); };
-  $("#dlb").onclick = () => gate() && downloadSheet(r, srcs);
+  $("#dlb").onclick = () => void ensureAccess().then((ok) => ok && downloadSheet(r, srcs));
   ui(); wake();
   if (r.direct) { srcs = [{ resolution: 0, url: r.direct, download: r.direct, subtitles: [] }]; load(0); return; }
   const d = await api.api(`play/${r.id}?se=${r.se || 0}&ep=${r.ep || 0}&name=${encodeURIComponent(r.title + (r.label ? " " + r.label : ""))}`); if (route !== r) return;
@@ -181,13 +182,27 @@ api.dlList?.().then((l) => dlList = l || []);
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-d]"); if (b) api.dlAct(+b.dataset.id, b.dataset.d); const a = e.target.closest("[data-dall]")?.dataset.dall; if (a) a === "folder" ? api.dlFolder?.() : api.dlAll?.(a); });
 
 let acc = { user: null, subscribed: !window.mm };
-const gate = () => { if (acc.subscribed) return true; account(acc.user ? "plans" : "login"); return false; };
+let lastAccAt = 0;
 function paintMe() {
   const u = acc.user, me = $("#me");
   me.innerHTML = `<span class="av">${u?.photo ? `<img src="${esc(u.photo)}">` : ""}</span><div><b>${u ? esc(u.name || u.email || "My account") : "Click to log in"}</b><small>${u ? (acc.admin ? `<em class="vip">ADMIN</em> Full access` : acc.subscribed ? `<em class="vip">VIP</em> ${esc(acc.plan || "Active")}` : "Free · Subscribe") : "Plans · Subscription"}</small></div>`;
 }
-async function loadAcc() { if (!api.account) return; acc = await api.account(); paintMe(); }
+async function loadAcc() {
+  if (!api.account) return;
+  acc = await api.account();
+  lastAccAt = Date.now();
+  paintMe();
+}
+async function ensureAccess() {
+  if (acc.subscribed) return true;
+  if (acc.user) await loadAcc();
+  if (acc.subscribed) return true;
+  account(acc.user ? "plans" : "login");
+  return false;
+}
 api.onAccount?.(loadAcc);
+addEventListener("focus", () => { if (acc.user && Date.now() - lastAccAt > 15_000) void loadAcc(); });
+setInterval(() => { if (acc.user && !document.hidden) void loadAcc(); }, 120_000);
 function account(which) {
   const m = document.createElement("div"); m.className = "modal"; const u = acc.user;
   const exp = acc.expires ? new Date(acc.expires).toLocaleDateString() : "";
@@ -217,7 +232,7 @@ document.addEventListener("click", (e) => {
   if (route.v === "title" && $("#view").onclick2?.(t)) return;
   if (t.dataset.acc) return account(t.dataset.acc);
   if (t.dataset.k) { const k = t.dataset.k; hist = []; return go(k.startsWith("cat:") ? { v: "cat", slug: k.slice(4) } : k.startsWith("up:") ? { v: "up", lang: k.slice(3) } : { v: k }, false); }
-  if (t.dataset.dir) return gate() && go({ v: "play", direct: t.dataset.dir, title: t.dataset.nm, id: t.dataset.t });
+  if (t.dataset.dir) return void ensureAccess().then((ok) => ok && go({ v: "play", direct: t.dataset.dir, title: t.dataset.nm, id: t.dataset.t }));
   if (t.dataset.t) go({ v: "title", id: t.dataset.t });
 });
 $("#back").onclick = () => hist.length && go(hist.pop(), false);

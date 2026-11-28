@@ -218,7 +218,9 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     };
 
     void evaluate();
-    const id = window.setInterval(() => void evaluate(), 8000);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void evaluate();
+    }, 30_000);
     return () => {
       alive = false;
       window.clearInterval(id);
@@ -228,8 +230,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   /** Serverless payment resume: finishes payments even after a refresh. */
   useEffect(() => {
     if (!user) return;
-    const id = window.setInterval(() => {
-      if (busy.current) return;
+    let ticks = 0;
+    const check = () => {
+      if (busy.current || document.visibilityState !== "visible") return;
+      if (!rememberedTx() && ticks > 0 && ticks % 20 !== 0) return;
       busy.current = true;
       void (async () => {
         try {
@@ -251,6 +255,11 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           busy.current = false;
         }
       })();
+    };
+    check();
+    const id = window.setInterval(() => {
+      ticks += 1;
+      check();
     }, 3000);
     return () => window.clearInterval(id);
   }, [user, refreshSubscription]);

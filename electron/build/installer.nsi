@@ -4,11 +4,11 @@ Name "Movie max"
 OutFile "/tmp/desktop-release/MovieMax-Setup.exe"
 InstallDir "$PROGRAMFILES64\Movie max"
 RequestExecutionLevel admin
-VIProductVersion "2.4.0.0"
+VIProductVersion "2.5.0.0"
 VIAddVersionKey "ProductName" "Movie max"
 VIAddVersionKey "CompanyName" "Movie max"
 VIAddVersionKey "FileDescription" "Movie max Setup"
-VIAddVersionKey "FileVersion" "2.4.0"
+VIAddVersionKey "FileVersion" "2.5.0"
 VIAddVersionKey "LegalCopyright" "Movie max"
 SetCompressor /SOLID lzma
 !define MUI_ICON "icon.ico"

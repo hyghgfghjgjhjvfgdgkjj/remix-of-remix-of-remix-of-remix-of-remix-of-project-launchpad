@@ -1,11 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchHome, fetchMostTrending, searchCatalog, fetchDetails, fetchSources, fetchRelated } from "@/lib/moviebox";
 import { CATEGORIES, isAdultItem } from "@/lib/categories";
-import { restListTitles } from "@/lib/luo-rest";
+import { restGetTitle, restListEpisodes, restListTitles } from "@/lib/luo-rest";
 import { fsWhere } from "@/lib/developer-api";
 
 let uploadsCache: { at: number; rows: Awaited<ReturnType<typeof restListTitles>> } | null = null;
 let plansCache: { at: number; v: unknown } | null = null;
+
+/** Edge Cache API (available on Cloudflare Workers) survives isolate restarts on Firestore quota days. */
+function edgeCache(): Cache | null {
+  const c = (globalThis as unknown as { caches?: { default?: Cache } }).caches;
+  return c?.default ?? null;
+}
 
 /** Data for the standalone desktop app: catalog, categories, details and in-app play links. */
 const cors = { "access-control-allow-origin": "*" };
@@ -34,10 +40,24 @@ export const Route = createFileRoute("/api/public/desktop/$")({
             const rows = await restListTitles();
             if (rows.length) uploadsCache = { at: Date.now(), rows };
           }
-          const items = (uploadsCache?.rows ?? []).filter((t) => t.language === lang && t.poster)
-            .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, 60)
-            .map((t) => ({ id: `up-${t.id}`, title: t.title, poster: t.poster, year: t.year, genre: t.genre ?? "", vj: t.vj, type: "movie", direct: t.videoUrl, description: t.description }));
-          return json({ items }, 300);
+          const items = (uploadsCache?.rows ?? []).filter((t) => t.language === lang)
+            .sort((a, b) => (Date.parse(b.updatedAt ?? "") || 0) - (Date.parse(a.updatedAt ?? "") || 0)).slice(0, 80)
+            .map((t) => ({ id: `up-${t.id}`, title: t.title, poster: t.poster, year: t.year, genre: t.genre ?? "", vj: t.vj, type: t.kind, direct: t.kind === "series" ? null : t.videoUrl, description: t.description }));
+          const cache = edgeCache();
+          const cacheKey = new Request(`https://luofilm.site/__desktop_cache/uploads/${lang}`);
+          if (items.length) {
+            const res = json({ items }, 300);
+            if (cache) await cache.put(cacheKey, Response.json({ items }, { headers: { ...cors, "cache-control": "public, max-age=86400" } })).catch(() => {});
+            return res;
+          }
+          if (cache) {
+            const hit = await cache.match(cacheKey).catch(() => null);
+            if (hit) {
+              const body = await hit.json().catch(() => null) as { items?: unknown[] } | null;
+              if (body?.items?.length) return json({ items: body.items }, 60);
+            }
+          }
+          return Response.json({ items: [] }, { headers: { ...cors, "cache-control": "no-store" } });
         }
         case "plans": {
           if (!plansCache || Date.now() - plansCache.at > 600_000) {
@@ -70,6 +90,15 @@ export const Route = createFileRoute("/api/public/desktop/$")({
         }
         case "title": {
           if (!id) return json({ error: "Missing id" });
+          if (id.startsWith("up-")) {
+            const rawId = id.slice(3);
+            if (!rawId) return json({ error: "Invalid id" });
+            const cached = uploadsCache?.rows.find((t) => t.id === rawId) ?? null;
+            const t = cached ?? await restGetTitle(rawId);
+            if (!t) return json({ error: "Not found" });
+            const episodes = t.kind === "series" || !t.videoUrl ? await restListEpisodes(rawId) : [];
+            return json({ id, title: t.title, description: t.description, poster: t.poster, backdrop: t.poster, year: t.year, genre: t.genre ?? "", vj: t.vj, seasons: [], luganda: { url: t.videoUrl ?? null, episodes } }, 300);
+          }
           const m = /^nb-(movies|tv-shows)-(\d+)$/.exec(id);
           if (m) {
             const raw = await nb(`${m[1]}/${m[2]}`); const d = raw.data ?? raw ?? {};

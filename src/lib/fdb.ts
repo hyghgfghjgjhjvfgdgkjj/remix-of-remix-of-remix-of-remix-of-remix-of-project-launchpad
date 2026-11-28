@@ -8,10 +8,13 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
+  query,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -30,6 +33,28 @@ const uuid = () =>
 async function readAll(table: string): Promise<Row[]> {
   const snap = await getDocs(collection(getDb(), table));
   return snap.docs.map((d) => ({ ...(d.data() as Row), id: d.id }));
+}
+
+/**
+ * Uses single-document or single-field indexed queries whenever an `eq` filter
+ * exists so user lookups read 1-5 documents instead of scanning whole collections
+ * (which exhausts the daily Firestore read quota). Single-field `where` never
+ * requires a composite index; remaining filters and sorting run in memory.
+ */
+async function readMatching(table: string, filters: Filter[]): Promise<Row[]> {
+  const idFilter = filters.find((f) => f.op === "eq" && f.col === "id" && f.value != null && String(f.value).trim());
+  if (idFilter) {
+    const snap = await getDoc(doc(getDb(), table, String(idFilter.value)));
+    const rows = snap.exists() ? [{ ...(snap.data() as Row), id: snap.id }] : [];
+    return applyFilters(rows, filters);
+  }
+  const eqFilter = filters.find((f) => f.op === "eq" && f.value !== undefined);
+  if (eqFilter) {
+    const snap = await getDocs(query(collection(getDb(), table), where(eqFilter.col, "==", eqFilter.value)));
+    const rows = snap.docs.map((d) => ({ ...(d.data() as Row), id: d.id }));
+    return applyFilters(rows, filters);
+  }
+  return applyFilters(await readAll(table), filters);
 }
 
 function compare(a: unknown, b: unknown) {
@@ -83,7 +108,7 @@ class SelectQuery implements PromiseLike<Result<Row[]>> {
 
   private async run(): Promise<Result<Row[]>> {
     try {
-      let rows = applyFilters(await readAll(this.table), this.filters);
+      let rows = await readMatching(this.table, this.filters);
       for (const o of [...this.orders].reverse()) {
         rows = rows.sort((a, b) => (o.asc ? compare(a[o.col], b[o.col]) : compare(b[o.col], a[o.col])));
       }
@@ -133,8 +158,13 @@ class WriteQuery implements PromiseLike<Result<Row[]>> {
 
   private async run(): Promise<Result<Row[]>> {
     try {
-      const rows = applyFilters(await readAll(this.table), this.filters);
       const db = getDb();
+      if (this.kind === "update" && this.filters.length === 1 && this.filters[0]?.op === "eq" && this.filters[0].col === "id" && this.filters[0].value != null) {
+        const id = String(this.filters[0].value);
+        await updateDoc(doc(db, this.table, id), { ...this.patch, updated_at: nowIso() });
+        return { data: [{ id, ...this.patch }], error: null };
+      }
+      const rows = await readMatching(this.table, this.filters);
       for (const r of rows) {
         if (this.kind === "delete") await deleteDoc(doc(db, this.table, String(r.id)));
         else await updateDoc(doc(db, this.table, String(r.id)), { ...this.patch, updated_at: nowIso() });
